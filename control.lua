@@ -177,7 +177,7 @@ local function getAlphaSignalCharacterAndCountFromNetwork(entity, wireType, sign
         -- Same count of the signals produces error
         elseif s.count > 0 and s.count == count then
           character = "err"
-		-- Negative and zero signals we skip
+        -- Negative and zero signals we skip
         else
           -- 
         end
@@ -210,10 +210,10 @@ local function getColorSignalColorAndCountFromNetwork(entity, wireType, signalCo
         if s.count > count then
           color = signalColorMap[s.signal.name]
           count = s.count
-        -- Same count of the signals produces error
+        -- Same count of the signals resets to the default color
         elseif s.count > 0 and s.count == count then
           color = colorDefaultOn
-		-- Negative and zero signals we skip
+        -- Negative and zero signals we skip
         else
           -- 
         end
@@ -261,11 +261,11 @@ end
 
 -- from binbinhfr/SmartDisplay, modified to check both wires and add them
 local function get_signal_value(entity,sig)
-	local behavior = entity.get_control_behavior()
-	if behavior == nil then	return nil end
+    local behavior = entity.get_control_behavior()
+    if behavior == nil then    return nil end
 
-	local condition = behavior.circuit_condition
-	if condition == nil then return nil end
+    local condition = behavior.circuit_condition
+    if condition == nil then return nil end
 
   local signal
   if sig then
@@ -274,22 +274,22 @@ local function get_signal_value(entity,sig)
     signal = condition.condition.first_signal
   end
 
-	if signal == nil or signal.name == nil then return(nil)	end
+    if signal == nil or signal.name == nil then return(nil)    end
 
-	local redval,greenval=0,0
+    local redval,greenval=0,0
 
-	local network = entity.get_circuit_network(defines.wire_type.red)
-	if network then
-	  redval = network.get_signal(signal)
-	end
+    local network = entity.get_circuit_network(defines.wire_type.red)
+    if network then
+      redval = network.get_signal(signal)
+    end
 
-	network = entity.get_circuit_network(defines.wire_type.green)
-	if network then
-	  greenval = network.get_signal(signal)
-	end
+    network = entity.get_circuit_network(defines.wire_type.green)
+    if network then
+      greenval = network.get_signal(signal)
+    end
 
 
-	local val = redval + greenval
+    local val = redval + greenval
 
   if not sig and not condition.fulfilled then
     -- use >= MININT32 to ensure always-on
@@ -480,7 +480,7 @@ local function onPlaceEntity(event)
 
       -- properly reset nixies when (re)added
       local behavior = entity.get_or_create_control_behavior()
-    	local condition = behavior.circuit_condition
+      local condition = behavior.circuit_condition
       condition.condition.comparator="="
       condition.condition.constant=val
       condition.condition.second_signal=nil
