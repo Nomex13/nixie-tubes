@@ -12,8 +12,7 @@ local function removeSpriteObjs(nixie)
   end
 end
 
-local stateOrientMap =
-  { -- state map for big nixies
+local stateOrientMap = { -- state map for big nixies
   ["0"]=1,
   ["1"]=2,
   ["2"]=3,
@@ -70,7 +69,7 @@ local stateOrientMap =
   ["-"]=52, -- for subtraction operation
   ["+"]=53,
 
-  }
+}
 
 local signalCharMap = {
   ["signal-0"] = "0",
@@ -112,39 +111,50 @@ local signalCharMap = {
   ["signal-negative"] = "negative",
 
   --extended symbols
-  ["signal-stop"] = ".",
-  ["signal-qmark"]="?",
-  ["signal-exmark"]="!",
-  ["signal-at"]="@",
-  ["signal-sqopen"]="[",
-  ["signal-sqclose"]="]",
-  ["signal-curopen"]="{",
-  ["signal-curclose"]="}",
-  ["signal-paropen"]="(",
-  ["signal-parclose"]=")",
-  ["signal-slash"]="/",
-  ["signal-asterisk"]="*",
-  ["signal-minus"]="-",
-  ["signal-plus"]="+",
+  ["signal-stop"] =     ".",
+  ["signal-qmark"] =    "?",
+  ["signal-exmark"] =   "!",
+  ["signal-at"] =       "@",
+  ["signal-sqopen"] =   "[",
+  ["signal-sqclose"] =  "]",
+  ["signal-curopen"] =  "{",
+  ["signal-curclose"] = "}",
+  ["signal-paropen"] =  "(",
+  ["signal-parclose"] = ")",
+  ["signal-slash"] =    "/",
+  ["signal-asterisk"] = "*",
+  ["signal-minus"] =    "-",
+  ["signal-plus"] =     "+",
+}
+
+local colorDefaultOn =  {r=1.0,  g=0.6,  b=0.2, a=1.0}
+local colorDefaultOff = {r=1.0,  g=1.0,  b=1.0, a=1.0}
+local signalColorMap = {
+  ["signal-red"] =    {r=1.0, g=0.0, b=0.0},
+  ["signal-green"] =  {r=0.0, g=1.0, b=0.0},
+  ["signal-blue"] =   {r=0.0, g=0.0, b=1.0},
+  ["signal-yellow"] = {r=1.0, g=1.0, b=0.0},
+  ["signal-pink"] =   {r=1.0, g=0.0, b=1.0},
+  ["signal-cyan"] =   {r=0.0, g=1.0, b=1.0},
 }
 
 local function RegisterStrings()
   if remote.interfaces['signalstrings'] and remote.interfaces['signalstrings']['register_signal'] then
     local syms = {
-      ["signal-stop"] = ".",
-      ["signal-qmark"]="?",
-      ["signal-exmark"]="!",
-      ["signal-at"]="@",
-      ["signal-sqopen"]="[",
-      ["signal-sqclose"]="]",
-      ["signal-curopen"]="{",
-      ["signal-curclose"]="}",
-      ["signal-paropen"]="(",
-      ["signal-parclose"]=")",
-      ["signal-slash"]="/",
-      ["signal-asterisk"]="*",
-      ["signal-minus"]="-",
-      ["signal-plus"]="+",
+      ["signal-stop"] =     ".",
+      ["signal-qmark"] =    "?",
+      ["signal-exmark"] =   "!",
+      ["signal-at"] =       "@",
+      ["signal-sqopen"] =   "[",
+      ["signal-sqclose"] =  "]",
+      ["signal-curopen"] =  "{",
+      ["signal-curclose"] = "}",
+      ["signal-paropen"] =  "(",
+      ["signal-parclose"] = ")",
+      ["signal-slash"] =    "/",
+      ["signal-asterisk"] = "*",
+      ["signal-minus"] =    "-",
+      ["signal-plus"] =     "+",
     }
     for name,char in pairs(syms) do
       remote.call('signalstrings','register_signal',name,char)
@@ -152,6 +162,75 @@ local function RegisterStrings()
   end
 end
 
+local function getAlphaSignalCharacterAndCountFromNetwork(entity, wireType, signalCharacter, signalCount)
+  local network = entity.get_circuit_network(wireType)
+  local character = signalCharacter
+  local count = signalCount
+
+  if network and network.signals and #network.signals > 0 then
+    for _,s in pairs(network.signals) do
+      if signalCharMap[s.signal.name] then
+        -- More count of the signal means more priority of it. Use the one with most priority.
+        if s.count > count then
+          character = signalCharMap[s.signal.name]
+          count = s.count
+        -- Same count of the signals produces error
+        elseif s.count > 0 and s.count == count then
+          character = "err"
+		-- Negative and zero signals we skip
+        else
+          -- 
+        end
+      end
+    end
+  end
+
+  return character, count
+end
+
+-- Gets Alpha signal character
+local function getAlphaSignalCharacterAndCount(entity)
+  local character = "off"
+  local count = 0
+
+  character, count = getAlphaSignalCharacterAndCountFromNetwork(entity, defines.wire_type.red, character, count)
+  character, count = getAlphaSignalCharacterAndCountFromNetwork(entity, defines.wire_type.green, character, count)
+  return character, count
+end
+
+local function getColorSignalColorAndCountFromNetwork(entity, wireType, signalColor, signalCount)
+  local network = entity.get_circuit_network(wireType)
+  local color = signalColor
+  local count = signalCount
+  
+  if network and network.signals and #network.signals > 0 then
+    for _,s in pairs(network.signals) do
+      if signalColorMap[s.signal.name] then
+        -- More count of the signal means more priority of it. Use the one with most priority.
+        if s.count > count then
+          color = signalColorMap[s.signal.name]
+          count = s.count
+        -- Same count of the signals produces error
+        elseif s.count > 0 and s.count == count then
+          color = colorDefaultOn
+		-- Negative and zero signals we skip
+        else
+          -- 
+        end
+      end
+    end
+  end
+
+  return color, count
+end
+
+local function getColorSignalColorAndCount(entity)
+  color = colorDefaultOn
+  count = 0
+  color, count = getColorSignalColorAndCountFromNetwork(entity, defines.wire_type.red, color, count)
+  color, count = getColorSignalColorAndCountFromNetwork(entity, defines.wire_type.green, color, count)
+  return color, count
+end
 
 --sets the state(s) and update the sprite for a nixie
 local function setStates(nixie,newstates,newcolor)
@@ -164,9 +243,9 @@ local function setStates(nixie,newstates,newcolor)
 
         -- allow keeping old color to stretch it for one cycle when updating value
         local color = newcolor=="keepcolor" and obj.color or newcolor
-        if not color then color = {r=1.0,  g=0.6,  b=0.2, a=1.0} end
+        if not color then color = colorDefaultOn end
 
-        if new_state == "off" then color={r=1.0,  g=1.0,  b=1.0, a=1.0} end
+        if new_state == "off" then color = colorDefaultOff end
 
         obj.color=color
       else
@@ -277,29 +356,6 @@ local function float_from_int(i)
   return sign * math.ldexp(bit32.bor(significand,0x00800000),exponent-23) --[[normal numbers]]
 end
 
-local function getAlphaSignals(entity,wire_type,charsig,charsigCount)
-  local net = entity.get_circuit_network(wire_type)
-
-  local ch = charsig
-
-  if net and net.signals and #net.signals > 0 then
-    for _,s in pairs(net.signals) do
-      if signalCharMap[s.signal.name] then
-        -- More count of the signal means more priority of it. Use the one with most priority.
-        if s.count > charsigCount then
-          ch = signalCharMap[s.signal.name]
-          charsigCount = s.count
-        -- Same count of the signals produces error
-        elseif s.count == charsigCount then
-          ch = "err"
-        end
-      end
-    end
-  end
-
-  return ch,charsigCount
-end
-
 local function onTickController(entity)
   if not entity.valid then
     onRemoveEntity(entity)
@@ -308,7 +364,7 @@ local function onTickController(entity)
 
   local v = get_signal_value(entity)
   if v then
-    local color
+    local color = getColorSignalColorAndCount(entity)
     local control = entity.get_or_create_control_behavior()
 
     local float = get_signal_value(entity,{name="signal-float",type="virtual"}) ~= 0
@@ -325,7 +381,7 @@ local function onTickController(entity)
       v = float_from_int(v)
     end
 
-    displayValString(entity,format:format(v),control.use_colors and control.color)
+    displayValString(entity,format:format(v),control.use_colors and color)
 
   else
     displayValString(entity)
@@ -340,14 +396,9 @@ local function onTickAlpha(entity)
     return
   end
 
-  local charsig = nil
-  local charsigCount = 0
-
-  charsig,charsigCount=getAlphaSignals(entity,defines.wire_type.red,charsig,charsigCount)
-  charsig,charsigCount=getAlphaSignals(entity,defines.wire_type.green,charsig,charsigCount)
-  charsig = charsig or "off"
-
-  local color
+  local charsig = getAlphaSignalCharacterAndCount(entity)
+  local color = getColorSignalColorAndCount(entity)
+  
   local control = entity.get_or_create_control_behavior()
   if control.use_colors then
     control.circuit_condition = {
@@ -415,7 +466,7 @@ local function onPlaceEntity(event)
           name=name,
           position=position,
           force=entity.force,
-          color = {r=1.0,  g=1.0,  b=1.0, a=1.0},
+          color = colorDefaultOff,
           variation = stateOrientMap["off"]
         })
       sprite.active=false
