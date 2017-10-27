@@ -277,7 +277,7 @@ local function float_from_int(i)
   return sign * math.ldexp(bit32.bor(significand,0x00800000),exponent-23) --[[normal numbers]]
 end
 
-local function getAlphaSignals(entity,wire_type,charsig)
+local function getAlphaSignals(entity,wire_type,charsig,charsigCount)
   local net = entity.get_circuit_network(wire_type)
 
   local ch = charsig
@@ -285,16 +285,19 @@ local function getAlphaSignals(entity,wire_type,charsig)
   if net and net.signals and #net.signals > 0 then
     for _,s in pairs(net.signals) do
       if signalCharMap[s.signal.name] then
-        if ch then
-          ch = "err"
-        else
+        -- More count of the signal means more priority of it. Use the one with most priority.
+        if s.count > charsigCount then
           ch = signalCharMap[s.signal.name]
+          charsigCount = s.count
+        -- Same count of the signals produces error
+        elseif s.count == charsigCount then
+          ch = "err"
         end
       end
     end
   end
 
-  return ch,co
+  return ch,charsigCount
 end
 
 local function onTickController(entity)
@@ -338,9 +341,10 @@ local function onTickAlpha(entity)
   end
 
   local charsig = nil
+  local charsigCount = 0
 
-  charsig=getAlphaSignals(entity,defines.wire_type.red,  charsig)
-  charsig=getAlphaSignals(entity,defines.wire_type.green,charsig)
+  charsig,charsigCount=getAlphaSignals(entity,defines.wire_type.red,charsig,charsigCount)
+  charsig,charsigCount=getAlphaSignals(entity,defines.wire_type.green,charsig,charsigCount)
   charsig = charsig or "off"
 
   local color
